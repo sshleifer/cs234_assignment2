@@ -32,13 +32,12 @@ class LinearSchedule(object):
 			  For t > self.nsteps self.epsilon remains constant
         """
         ##############################################################
-        ################ YOUR CODE HERE - 3-4 lines ################## 
-
-        pass
-
-        ##############################################################
-        ######################## END YOUR CODE ############## ########
-
+        ################ YOUR CODE HERE - 3-4 lines ##################
+        schedule = np.linspace(self.eps_begin, self.eps_end, num=self.nsteps + 1)
+        if t > self.nsteps:
+            self.epsilon = schedule[-1]
+        else:
+            self.epsilon = schedule[t]
 
 class LinearExploration(LinearSchedule):
     def __init__(self, env, eps_begin, eps_end, nsteps):
@@ -76,15 +75,11 @@ class LinearExploration(LinearSchedule):
                 you may use env.action_space.sample() to generate 
                 a random action        
         """
-        ##############################################################
-        ################ YOUR CODE HERE - 4-5 lines ##################
-
-        pass
-
-        ##############################################################
-        ######################## END YOUR CODE #######################
-
-
+        do_random = np.random.choice([0, 1], p=[1 - self.epsilon, self.epsilon])
+        if do_random:
+            return self.env.action_space.sample()
+        else:
+            return best_action
 
 def test1():
     env = EnvTest((5, 5, 1))
