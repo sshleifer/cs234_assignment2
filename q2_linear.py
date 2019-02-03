@@ -21,7 +21,18 @@ class Linear(DQN):
         data during training.
         """
         # this information might be useful
-        state_shape = list(self.env.observation_space.shape)
+        c = self.config
+        batch_dim_size = None
+        height, width, n_chan = list(self.env.observation_space.shape)
+        self.s = tf.placeholder(
+            tf.uint8, (batch_dim_size, height, width, n_chan * c.state_history)
+        )
+        self.a = tf.placeholder(tf.int32, (batch_dim_size))
+        self.r = tf.placeholder(tf.float32, (batch_dim_size))
+        self.sp = tf.placeholder(tf.uint8, (batch_dim_size, height, width, n_chan * c.state_history))
+        self.done_mask = tf.placeholder(tf.bool, (batch_dim_size))
+        self.lr = tf.placeholder(tf.float32, shape=[])
+
 
         ##############################################################
         """
@@ -47,14 +58,6 @@ class Linear(DQN):
             Check the use of None in the dimension for tensorflow placeholders.
             You can also use the state_shape computed above.
         """
-        ##############################################################
-        ################YOUR CODE HERE (6-15 lines) ##################
-
-        pass
-
-        ##############################################################
-        ######################## END YOUR CODE #######################
-
 
     def get_q_values_op(self, state, scope, reuse=False):
         """
@@ -71,6 +74,10 @@ class Linear(DQN):
         """
         # this information might be useful
         num_actions = self.env.action_space.n
+        with tf.variable_scope(scope, reuse=reuse) as vs:
+            # TODO: use  - tf.layers.flatten
+            out = tf.layers.dense(state, num_actions, use_bias=True)
+        return out
 
         ##############################################################
         """
@@ -85,16 +92,6 @@ class Linear(DQN):
 
             - Make sure to also specify the scope and reuse
         """
-        ##############################################################
-        ################ YOUR CODE HERE - 2-3 lines ################## 
-        
-        pass
-
-        ##############################################################
-        ######################## END YOUR CODE #######################
-
-        return out
-
 
     def add_update_target_op(self, q_scope, target_q_scope):
         """
@@ -129,13 +126,16 @@ class Linear(DQN):
 
         (be sure that you set self.update_target_op)
         """
-        ##############################################################
-        ################### YOUR CODE HERE - 5-10 lines #############
-        
-        pass
+        def assign_stuff(q_var, targ_var):
+            with tf.variable_scope(target_q_scope):
+                return tf.assign(targ_var, q_var)
 
-        ##############################################################
-        ######################## END YOUR CODE #######################
+        sorted_q_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, q_scope)
+        sorted_targ_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, target_q_scope)
+        # TODO(SS): do we need to sort?
+        zipped = zip(sorted_q_vars, sorted_targ_vars)
+        self.update_target_op = tf.group(*[tf.assign(a,b) for a, b in zipped])
+        ################### YOUR CODE HERE - 5-10 lines #############
 
 
     def add_loss_op(self, q, target_q):
@@ -148,6 +148,13 @@ class Linear(DQN):
         """
         # you may need this variable
         num_actions = self.env.action_space.n
+
+        future_rewards = tf.cast(self.done_mask, tf.float32) * self.config.gamma * tf.reduce_max(target_q, axis=1)
+        qs = self.r + future_rewards
+        deltas = tf.squared_difference(qs, q)
+        self.loss = tf.reduce_mean(deltas)
+
+        #future_rewards_if_not_done = tf.
 
         ##############################################################
         """
@@ -170,7 +177,6 @@ class Linear(DQN):
         """
         ##############################################################
         ##################### YOUR CODE HERE - 4-5 lines #############
-
         pass
 
         ##############################################################
@@ -183,7 +189,17 @@ class Linear(DQN):
         Args:
             scope: (string) scope name, that specifies if target network or not
         """
+        all_variables = tf.trainable_variables()
+        scope_variables = tf.contrib.framework.filter_variables(all_variables, include_patterns=[scope])
 
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+        gvs = optimizer.compute_gradients(self.loss, var_list=scope_variables)
+        if self.config.grad_clip:
+            gvs = [(tf.clip_by_norm(grad, config.clip_val), var)
+                       for grad, var in gvs]
+
+        self.train_op = optimizer.apply_gradients(gvs)
+        self.grad_norm = tf.global_norm([x for x in gvs if x is not None])
         ##############################################################
         """
         TODO: 
