@@ -75,8 +75,9 @@ class Linear(DQN):
         # this information might be useful
         num_actions = self.env.action_space.n
         with tf.variable_scope(scope, reuse=reuse) as vs:
-            # TODO: use  - tf.layers.flatten
-            out = tf.layers.dense(state, num_actions, use_bias=True)
+            # TODO?: use  - tf.layers.flatten
+            flat_state = tf.contrib.layers.flatten(state)
+            out = tf.layers.dense(flat_state, num_actions, use_bias=True)
         return out
 
         ##############################################################
@@ -126,10 +127,6 @@ class Linear(DQN):
 
         (be sure that you set self.update_target_op)
         """
-        def assign_stuff(q_var, targ_var):
-            with tf.variable_scope(target_q_scope):
-                return tf.assign(targ_var, q_var)
-
         sorted_q_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, q_scope)
         sorted_targ_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, target_q_scope)
         # TODO(SS): do we need to sort?
@@ -148,10 +145,10 @@ class Linear(DQN):
         """
         # you may need this variable
         num_actions = self.env.action_space.n
-
-        future_rewards = tf.cast(self.done_mask, tf.float32) * self.config.gamma * tf.reduce_max(target_q, axis=1)
-        qs = self.r + future_rewards
-        deltas = tf.squared_difference(qs, q)
+        not_done_mask = 1 - tf.cast(self.done_mask, tf.float32)
+        future_rewards = (not_done_mask * self.config.gamma * tf.reduce_max(target_q, axis=1))
+        qsamp = self.r + future_rewards
+        deltas = tf.squared_difference(qsamp, q)
         self.loss = tf.reduce_mean(deltas)
 
         #future_rewards_if_not_done = tf.
