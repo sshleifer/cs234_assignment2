@@ -148,7 +148,9 @@ class Linear(DQN):
         not_done_mask = 1 - tf.cast(self.done_mask, tf.float32)
         future_rewards = (not_done_mask * self.config.gamma * tf.reduce_max(target_q, axis=1))
         qsamp = self.r + future_rewards
-        deltas = tf.squared_difference(qsamp, q)
+        one_hot_action = tf.one_hot(self.a, depth=num_actions)
+        qas = tf.reduce_sum(q * one_hot_action)
+        deltas = tf.squared_difference(qsamp, qas)
         self.loss = tf.reduce_mean(deltas)
 
         #future_rewards_if_not_done = tf.
