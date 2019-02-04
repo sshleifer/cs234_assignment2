@@ -173,13 +173,6 @@ class Linear(DQN):
                 - tf.squared_difference
                 - tf.reduce_mean
         """
-        ##############################################################
-        ##################### YOUR CODE HERE - 4-5 lines #############
-        pass
-
-        ##############################################################
-        ######################## END YOUR CODE #######################
-
 
     def add_optimizer_op(self, scope):
         """
@@ -187,11 +180,15 @@ class Linear(DQN):
         Args:
             scope: (string) scope name, that specifies if target network or not
         """
-        all_variables = tf.trainable_variables()
-        scope_variables = tf.contrib.framework.filter_variables(all_variables, include_patterns=[scope])
+        #all_variables = tf.trainable_variables()
+        #scope_variables = tf.contrib.framework.filter_variables(all_variables, include_patterns=[scope])
+
+        scope_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
+        print(scope_variables, scope)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         gvs = optimizer.compute_gradients(self.loss, var_list=scope_variables)
+        print(gvs)
         if self.config.grad_clip:
             gvs = [(tf.clip_by_norm(grad, config.clip_val), var)
                        for grad, var in gvs]
@@ -219,14 +216,7 @@ class Linear(DQN):
              
              you can access config variables by writing self.config.variable_name
         """
-        ##############################################################
-        #################### YOUR CODE HERE - 8-12 lines #############
 
-        pass
-        
-        ##############################################################
-        ######################## END YOUR CODE #######################
-    
 
 
 if __name__ == '__main__':
