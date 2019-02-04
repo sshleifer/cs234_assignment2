@@ -130,7 +130,8 @@ class Linear(DQN):
         sorted_targ_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, target_q_scope)
         # TODO(SS): do we need to sort?
         zipped = zip(sorted_q_vars, sorted_targ_vars)
-        self.update_target_op = tf.group(*[tf.assign(a,b) for a, b in zipped])
+        # I want my target network to match my learned Q variables
+        self.update_target_op = tf.group(*[tf.assign(b, a) for a, b in zipped])
         ################### YOUR CODE HERE - 5-10 lines #############
 
 
@@ -146,10 +147,10 @@ class Linear(DQN):
         num_actions = self.env.action_space.n
         not_done_mask = 1 - tf.cast(self.done_mask, tf.float32)
         future_rewards = (not_done_mask * self.config.gamma * tf.reduce_max(target_q, axis=1))
-        qsamp = self.r + future_rewards
-        one_hot_action = tf.one_hot(self.a, depth=num_actions)
-        qas = tf.reduce_sum(q * one_hot_action)
-        deltas = tf.squared_difference(qsamp, qas)
+        qsamp = self.r + future_rewards  #(b, num_actions)
+        one_hot_action = tf.one_hot(self.a, depth=num_actions) # (b, num_actions)
+        qas = tf.reduce_sum(q * one_hot_action, axis=1) # (b, )
+        deltas = tf.squared_difference(qsamp, qas)  #
         self.loss = tf.reduce_mean(deltas)
 
         #future_rewards_if_not_done = tf.
@@ -184,11 +185,9 @@ class Linear(DQN):
         #scope_variables = tf.contrib.framework.filter_variables(all_variables, include_patterns=[scope])
 
         scope_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
-        print(scope_variables, scope)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         gvs = optimizer.compute_gradients(self.loss, var_list=scope_variables)
-        print(gvs)
         if self.config.grad_clip:
             gvs = [(tf.clip_by_norm(grad, config.clip_val), var)
                        for grad, var in gvs]
