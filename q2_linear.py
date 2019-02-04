@@ -75,7 +75,6 @@ class Linear(DQN):
         # this information might be useful
         num_actions = self.env.action_space.n
         with tf.variable_scope(scope, reuse=reuse) as vs:
-            # TODO?: use  - tf.layers.flatten
             flat_state = tf.contrib.layers.flatten(state)
             out = tf.layers.dense(flat_state, num_actions, use_bias=True)
         return out
