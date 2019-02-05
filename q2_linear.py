@@ -10,6 +10,7 @@ from configs.q2_linear import config
 
 
 def count_parameters():
+    """This isn't identical to the hand counted totals for DQN, but same."""
     total_parameters = 0
     for variable in tf.trainable_variables():
         # shape is an array of tf.Dimension
@@ -24,6 +25,7 @@ def count_parameters():
         total_parameters += variable_parameters
     print('TOTAL PARAMETERS', total_parameters / 2)
     return total_parameters
+
 
 class Linear(DQN):
     """
@@ -93,7 +95,7 @@ class Linear(DQN):
         num_actions = self.env.action_space.n
 
         with tf.variable_scope(scope, reuse=reuse) as vs:
-            flat_state = tf.contrib.layers.flatten(state)
+            flat_state = tf.layers.flatten(state)
             out = tf.layers.dense(flat_state, num_actions, use_bias=True)
         return out
 
@@ -144,12 +146,14 @@ class Linear(DQN):
 
         (be sure that you set self.update_target_op)
         """
-        sorted_q_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, q_scope)
-        sorted_targ_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, target_q_scope)
-        # TODO(SS): do we need to sort?
-        zipped = zip(sorted_q_vars, sorted_targ_vars)
+        q_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, q_scope)
+        targ_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, target_q_scope)
+        # TODO(SS): do we need to sort? YES, but not the bug
+        #
+        zipped = zip(q_vars, targ_vars)
         # I want my target network to match my learned Q variables
-        self.update_target_op = tf.group(*[tf.assign(b, a) for a, b in zipped])
+        self.update_target_op = tf.group(*[tf.assign(target_var, q_var)
+                                           for q_var, target_var in zipped])
         ################### YOUR CODE HERE - 5-10 lines #############
 
 
@@ -208,11 +212,11 @@ class Linear(DQN):
         gvs = optimizer.compute_gradients(self.loss, var_list=scope_variables)
         if self.config.grad_clip:
             gvs = [(tf.clip_by_norm(grad, config.clip_val), var)
-                       for grad, var in gvs]
+                       for grad, var in gvs if grad is not None]
         count_parameters()
         # print('NUM ACTIONS', self.env.action_space.n)
         self.train_op = optimizer.apply_gradients(gvs)
-        self.grad_norm = tf.global_norm([x for x in gvs if x is not None])
+        self.grad_norm = tf.global_norm([x[0] for x in gvs if x[0] is not None])
         ##############################################################
         """
         TODO: 
