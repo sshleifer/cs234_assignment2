@@ -32,15 +32,17 @@ class NatureQN(Linear):
         # this information might be useful
         num_actions = self.env.action_space.n
         with tf.variable_scope(scope, reuse=reuse) as vs:
-            conv_kw = dict(padding = 'same', activation = tf.nn.relu)
+            conv_kw = dict(padding='same', activation=tf.nn.relu)
             C = tf.layers.conv2d
             #fc_shape = 512
             x = C(state, 32, 8, strides=(4,4), **conv_kw)
-            x = C(x, 64, 4, strides=(2,2),**conv_kw)
+            x = C(x, 64, 4, strides=(2,2), **conv_kw)
             x = C(x, 64, 3, strides=(1, 1), **conv_kw)
             flat_x = tf.contrib.layers.flatten(x)
-            h_final = tf.layers.dense(flat_x, 512)
+            h_final = tf.layers.dense(flat_x, 512, use_bias=True, activation=tf.nn.relu)
             out = tf.layers.dense(h_final, num_actions)
+
+
 
 
 
