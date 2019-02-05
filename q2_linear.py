@@ -9,6 +9,22 @@ from q1_schedule import LinearExploration, LinearSchedule
 from configs.q2_linear import config
 
 
+def count_parameters():
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+        # shape is an array of tf.Dimension
+        shape = variable.get_shape()
+        #print(shape)
+        #print(len(shape))
+        variable_parameters = 1
+        for dim in shape:
+            #print(dim)
+            variable_parameters *= dim.value
+        #print(variable_parameters)
+        total_parameters += variable_parameters
+    print('TOTAL PARAMETERS', total_parameters / 2)
+    return total_parameters
+
 class Linear(DQN):
     """
     Implement Fully Connected with Tensorflow
@@ -73,7 +89,9 @@ class Linear(DQN):
             out: (tf tensor) of shape = (batch_size, num_actions)
         """
         # this information might be useful
+
         num_actions = self.env.action_space.n
+
         with tf.variable_scope(scope, reuse=reuse) as vs:
             flat_state = tf.contrib.layers.flatten(state)
             out = tf.layers.dense(flat_state, num_actions, use_bias=True)
@@ -191,7 +209,8 @@ class Linear(DQN):
         if self.config.grad_clip:
             gvs = [(tf.clip_by_norm(grad, config.clip_val), var)
                        for grad, var in gvs]
-
+        count_parameters()
+        # print('NUM ACTIONS', self.env.action_space.n)
         self.train_op = optimizer.apply_gradients(gvs)
         self.grad_norm = tf.global_norm([x for x in gvs if x is not None])
         ##############################################################

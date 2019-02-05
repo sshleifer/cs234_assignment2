@@ -39,7 +39,8 @@ class NatureQN(Linear):
             x = C(x, 64, 4, strides=(2,2),**conv_kw)
             x = C(x, 64, 3, strides=(1, 1), **conv_kw)
             flat_x = tf.contrib.layers.flatten(x)
-            out = tf.layers.dense(flat_x, num_actions)
+            h_final = tf.layers.dense(flat_x, 512)
+            out = tf.layers.dense(h_final, num_actions)
 
 
 
